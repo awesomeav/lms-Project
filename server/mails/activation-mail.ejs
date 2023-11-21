@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>lms Account Activation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        text-align: center;
+      }
+
+      h1 {
+        color: #333;
+      }
+
+      .email-container {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin: 20px auto;
+        max-width: 600px;
+        padding: 20px;
+      }
+
+      p {
+        color: #555;
+      }
+
+      a {
+        color: #007bff;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <h1>Account Activation Email</h1>
+      <p>Hello <%= user.name %>,</p>
+      <p>
+        Thank you for registering with our website. humko join krlo baata rhe
+        hai smajheeeeeeeeeeeeeee eh lo otp,
+      </p>
+      <p>
+        <%= activationCode %> If you didn't request this, please ignore this
+        email.
+      </p>
+      <p>
+        Best regards,<br />Our Website is in progress will keep you posted
+        please fund this startup.
+      </p>
+    </div>
+  </body>
+</html>
