@@ -68,7 +68,6 @@ userSchema.pre<Iuser>("save", async function (next) {
   if (!this.isModified("password")) {
     next();
   }
-
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

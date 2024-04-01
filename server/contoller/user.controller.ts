@@ -7,6 +7,8 @@ import sendMail from "../utils/sendMail";
 import { CatachAsyncErrors } from "../Middleware/catchAsyncErrors";
 import ErrorHandler from "../utils/ErrorHandlers";
 import UserModel, { Iuser } from "../models/user.model";
+import bcrypt from "bcryptjs";
+import cloudinary from "cloudinary";
 import {
   accessTokenOptions,
   refreshTokenOptions,
@@ -24,8 +26,16 @@ interface IActivationToken {
   token?: string;
   activationCode?: any;
 }
-interface ExpressRequest extends Request {
-  user?: { role: string; _id: string; id: string }; // Add the user property to Request
+export interface ExpressRequest extends Request {
+  user?: {
+    role: string;
+    public: any;
+    _id: any;
+    id: string;
+    avatar: string;
+    courses?: any;
+    name?: string;
+  }; // Add the user property to Request
 }
 
 export const registrationUser = CatachAsyncErrors(
@@ -207,7 +217,7 @@ const isAuth = CatachAsyncErrors(
 );
 
 export const updateAccessToken = CatachAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
     const refresh_Token = req.cookies.refresh_token;
     console.log("refresh_Token :", refresh_Token);
 
@@ -243,7 +253,7 @@ export const updateAccessToken = CatachAsyncErrors(
         expiresIn: "3d",
       }
     );
-
+    req.user = user;
     res.cookie("accessToken", accessToken), accessTokenOptions;
     res.cookie("refreshToken", refreshToken, refreshTokenOptions);
 
@@ -286,17 +296,112 @@ export const socialAuth = CatachAsyncErrors(
   }
 );
 // update user info phone and email
+interface UpdateUserInfo {
+  phone: string;
+  email: string;
+}
 
 export const updateUser = CatachAsyncErrors(
   async (req: ExpressRequest, res: Response, next: NextFunction) => {
     try {
-      const userId: any = req?.user?._id;
-      const user = await UserModel.findByIdAndUpdate(userId, req.body, {
-        new: true,
-        runValidators: true,
-      });
+      const { email, name } = req.body;
+      const user = await UserModel.findById(req?.user?._id);
+      if (user && email) {
+        const isEmail = await UserModel.findOne({ email });
+        if (isEmail) {
+          return next(new ErrorHandler("Email already exists", 400));
+        }
+      }
+      if (name && user) {
+        user.name = name;
+      }
+      await user?.save();
+
+      await redis.set(user?._id, JSON.stringify(user));
       res.status(200).json({
-        status: "success",
+        message: "success",
+        user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+// $2a$10$n3HyHLWEoOdsPpxWP60Fmeh0WZ1.KZkuXEtRzqPDduxW2EVygsCja
+// update password
+export const updatePassword = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    const { oldPassword, newPassword } = req.body;
+    const userId: any = req?.user?._id;
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return next(new ErrorHandler("User not found", 404));
+    }
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return next(new ErrorHandler("Old password is incorrect", 400));
+    }
+    if (oldPassword === newPassword) {
+      return next(
+        new ErrorHandler("New password cannot be same as old password", 400)
+      );
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const body = { password: hashedPassword };
+    const updatedUser = await UserModel.findByIdAndUpdate(userId, body, {
+      new: true,
+      runValidators: true,
+    });
+    await redis.set(updatedUser?._id, JSON.stringify(updatedUser));
+    res.status(200).json({
+      status: "success updated",
+      user: updatedUser,
+    });
+  }
+);
+// update profile picture
+
+export const updateProfilePicture = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      const { avatar } = req.body;
+      const userId = req?.user?._id;
+      console.log("userId :", userId);
+      const user = await UserModel.findById(userId);
+      console.log("user :", user);
+      const useravatar: any = user?.avatar;
+      if (user && avatar) {
+        if (useravatar?.public?._id) {
+          //fisrt delete the pic from cloudinary
+          await cloudinary.v2.uploader.destroy(useravatar?.public?._id);
+          const myCloud = await cloudinary.v2.uploader.upload(avatar, {
+            folder: "avatars",
+            width: 150,
+            crop: "scale",
+          });
+
+          user.avatar = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        } else {
+          const myCloud = await cloudinary.v2.uploader.upload(avatar, {
+            folder: "avatars",
+            width: 150,
+            crop: "scale",
+          });
+
+          user.avatar = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        }
+      }
+
+      await user?.save();
+      await redis.set(userId, JSON.stringify(user));
+      res.status(200).json({
+        success: "true",
         user,
       });
     } catch (err) {

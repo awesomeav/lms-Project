@@ -36,6 +36,8 @@ export const isAuthencation = CatachAsyncErrors(
 // validate user role
 export const authorizedRoles = (...roles: any) => {
   return (req: ExpressRequest, res: Response, next: any) => {
+    console.log("roles :", roles);
+    console.log("req.user?.role :", req.user?.role);
     if (!roles.includes(req.user?.role || "")) {
       return next(
         new ErrorHandler("you do not have permission to access this route", 403)
