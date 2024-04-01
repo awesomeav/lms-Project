@@ -46,5 +46,4 @@ const sendMail = async (options: any) => {
     }
   });
 };
-
 export default sendMail;
