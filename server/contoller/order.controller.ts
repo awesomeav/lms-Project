@@ -13,9 +13,9 @@ import { createCourses } from "../services/course.service";
 import CourseModel from "../models/course.model";
 import { redis } from "../utils/redis";
 import { ExpressRequest } from "./user.controller";
-import mongoose from "mongoose";
-import OrderModel, { IOrder } from "../models/order.model";
+import { IOrder } from "../models/order.model";
 import { newOrder } from "../services/order.service";
+import NotificationModel from "../models/notification.model";
 
 // create order post req.
 
@@ -25,7 +25,7 @@ export const createOrder = CatachAsyncErrors(
       const { courseId, payment_Info } = req.body as IOrder;
       const user = await UserModel.findById(req?.user?._id);
       if (!user) {
-        return next(new ErrorHandler("User not found", 404));
+        return next(new ErrorHandler("User not Login or found", 404));
       }
       const alreadyPurchased = user?.courses.map(
         (items: any) => items._id.toString() == courseId
@@ -47,7 +47,51 @@ export const createOrder = CatachAsyncErrors(
         course: courseId,
         payment_Info,
       };
-      newOrder(orderData, res, next);
+
+      // send a mail to user for payment
+
+      const mailData = {
+        order: {
+          _id: course?._id.toString?.splice(0, 6),
+          name: course?.name,
+          price: course?.price,
+          date: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+          }),
+        },
+      };
+
+      const html = await ejs.renderFile(
+        path.join(__dirname, "../mail/order-confirmation.ejs"),
+        { order: mailData }
+      );
+
+      try {
+        if (user) {
+          await sendMail({
+            email: user?.email,
+            subject: "order confirmation",
+            template: "order-confirmation.ejs",
+            mailData,
+            html,
+          });
+        }
+        user?.courses?.push(course?._id);
+        await user?.save();
+        await NotificationModel.create({
+          user: user?._id,
+          message: `You have a new order from  ${course?.name}`,
+          title: "New order",
+        });
+
+        course.purchased ? (course.purchased += 1) : course.purchased;
+        await course.save();
+        newOrder(orderData, res, next);
+      } catch (error: any) {
+        return next(new ErrorHandler(error?.message, 500));
+      }
     } catch (error: any) {
       return next(new ErrorHandler(error?.message, 500));
     }
