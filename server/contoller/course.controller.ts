@@ -14,6 +14,7 @@ import CourseModel from "../models/course.model";
 import { redis } from "../utils/redis";
 import { ExpressRequest } from "./user.controller";
 import mongoose from "mongoose";
+import NotificationModel from "../models/notification.model";
 
 // upload course
 
@@ -186,6 +187,13 @@ export const addQuestion = CatachAsyncErrors(
       };
       //add this to course content
       courseContent?.questions?.push(questionObject);
+      // send notification to the admin
+      await NotificationModel.create({
+        title: "New question recived",
+        user: req.user,
+        message: `you have a  question asked in ${courseContent?.title}`,
+      });
+
       // save the updated
 
       await course?.save();
@@ -235,6 +243,11 @@ export const addAnswer = CatachAsyncErrors(
       // save the updated
       if (req?.user?._id == question?.user?._id) {
         // send notification in dashboard for replies to admin
+        await NotificationModel.create({
+          title: "New question reply received",
+          user: req.user?._id,
+          message: `you have a  question reply in ${courseContent?.title}`,
+        });
         // someone repl
       } else {
         const data: any = {

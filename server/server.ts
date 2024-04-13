@@ -10,7 +10,7 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 6000;
 app.listen(port, () => {
   console.log(`Server  is started on port ${port}`);
   connectDB();
