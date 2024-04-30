@@ -13,7 +13,7 @@ import { createCourses } from "../services/course.service";
 import CourseModel from "../models/course.model";
 import { redis } from "../utils/redis";
 import { ExpressRequest } from "./user.controller";
-import { IOrder } from "../models/order.model";
+import OrderModel, { IOrder } from "../models/order.model";
 import { newOrder } from "../services/order.service";
 import NotificationModel from "../models/notification.model";
 
@@ -94,6 +94,21 @@ export const createOrder = CatachAsyncErrors(
       }
     } catch (error: any) {
       return next(new ErrorHandler(error?.message, 500));
+    }
+  }
+);
+
+// get all order
+export const getAllOrders = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      const orders = await OrderModel.find().sort({ createdAt: -1 });
+      res.status(200).json({
+        success: true,
+        orders,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 );

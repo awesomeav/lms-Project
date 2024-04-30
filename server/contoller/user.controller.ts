@@ -409,3 +409,65 @@ export const updateProfilePicture = CatachAsyncErrors(
     }
   }
 );
+// get all user - for admin
+export const getAllUsers = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      getAllUsers(req, res, next);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// update user role
+
+export const updateUserRole = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      // update user role
+      const { id } = req?.params;
+      const { role } = req?.body;
+
+      if (!id) {
+        return next(new ErrorHandler("User not found", 404));
+      }
+      const user = await UserModel.findByIdAndUpdate(
+        id,
+        { role },
+        { new: true }
+      );
+
+      res.status(200).json({
+        success: "role updated",
+        user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// delete user
+
+export const deleteUser = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      // delete user
+      const { id } = req?.params;
+      if (!id) {
+        return next(new ErrorHandler("User not found", 404));
+      }
+      const user = await UserModel.findByIdAndDelete(id);
+
+      await redis.del(id);
+
+      res.status(200).json({
+        success: "user deleted",
+        user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);

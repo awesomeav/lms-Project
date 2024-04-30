@@ -2,14 +2,13 @@
 require("dotenv").config();
 import { Request, Response, NextFunction } from "express";
 import jwt, { Secret, verify } from "jsonwebtoken";
-import ejs from "ejs";
-import path from "path";
+
 import sendMail from "../utils/sendMail";
 import { CatachAsyncErrors } from "../Middleware/catchAsyncErrors";
 import ErrorHandler from "../utils/ErrorHandlers";
 
 import { ExpressRequest } from "./user.controller";
-
+import cron from "node-cron";
 import NotificationModel from "../models/notification.model";
 // get all notifications -- only admins
 export const getNotification = CatachAsyncErrors(
@@ -53,3 +52,22 @@ export const updateNotification = CatachAsyncErrors(
     }
   }
 );
+
+// delete past 30 days notification running a cron job ,
+// code changes will implement mq worker for this to schedula a job.
+cron.schedule("0 0 0 * * *", async () => {
+  try {
+    const notifications = await NotificationModel.find({
+      createdAt: {
+        $lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+    notifications.forEach(async (notification: any) => {
+      await notification.remove();
+    });
+
+    console.log("deleted read notifications");
+  } catch (error: any) {
+    console.log("error :", error);
+  }
+});

@@ -18,3 +18,13 @@ export const getUserById = async (id: string, res: Response) => {
     });
   }
 };
+
+// get all users
+
+export const getAllUsers = async (req: any, res: Response) => {
+  const users = await UserModel.find().sort({ createdAt: -1 });
+  res.status(200).json({
+    success: true,
+    users,
+  });
+};

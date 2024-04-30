@@ -378,3 +378,40 @@ export const addRepliesToReviews = CatachAsyncErrors(
     }
   }
 );
+// for admin to get all courses
+export const getAllCourses = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      const courses = await CourseModel.find().sort({ createdAt: -1 });
+      res.status(200).json({
+        success: true,
+        courses,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// del course
+export const deleteCourse = CatachAsyncErrors(
+  async (req: ExpressRequest, res: Response, next: NextFunction) => {
+    try {
+      // delete user
+      const { id } = req?.params;
+      if (!id) {
+        return next(new ErrorHandler("User not found", 404));
+      }
+      const course = await CourseModel.findByIdAndDelete(id);
+
+      await redis.del(id);
+
+      res.status(200).json({
+        success: "course deleted",
+        course,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
